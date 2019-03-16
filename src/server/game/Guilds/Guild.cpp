@@ -95,7 +95,7 @@ char const* GetGuildEventString(GuildEvents event)
 inline uint32 GetGuildBankTabPrice(uint8 tabId)
 {
     // these prices are in gold units, not copper
-    static uint32 const tabPrices[GUILD_BANK_MAX_TABS] = { 100, 250, 500, 1000, 2500, 5000 };
+    static uint32 const tabPrices[GUILD_BANK_MAX_TABS] = { 25, 65, 125, 250, 625, 1250 }; // Must also \Interface\AddOns\Blizzard_GuildBankUI\Blizzard_GuildBankUI.lua to update client price
     ASSERT(tabId < GUILD_BANK_MAX_TABS);
 
     return tabPrices[tabId];

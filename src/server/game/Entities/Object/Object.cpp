@@ -471,7 +471,7 @@ void Object::BuildMovementUpdate(ByteBuffer* data, uint16 flags) const
 
     // 0x200
     if (flags & UPDATEFLAG_ROTATION)
-        *data << int64(ToGameObject()->GetPackedWorldRotation());
+        *data << int64(ToGameObject()->GetPackedLocalRotation());
 }
 
 void Object::BuildValuesUpdate(uint8 updateType, ByteBuffer* data, Player* target) const
@@ -1013,7 +1013,7 @@ void WorldObject::setActive(bool on)
 
     m_isActive = on;
 
-    if (!IsInWorld())
+    if (on && !IsInWorld())
         return;
 
     Map* map = FindMap();
@@ -1078,7 +1078,7 @@ void WorldObject::_Create(ObjectGuid::LowType guidlow, HighGuid guidhigh, uint32
 void WorldObject::UpdatePositionData()
 {
     PositionFullTerrainStatus data;
-    GetMap()->GetFullTerrainStatusForPosition(GetPositionX(), GetPositionY(), GetPositionZ(), data, MAP_ALL_LIQUIDS);
+    GetMap()->GetFullTerrainStatusForPosition(GetPositionX(), GetPositionY(), GetPositionZ(), data, MAP_ALL_LIQUIDS, GetCollisionHeight());
     ProcessPositionDataChanged(data);
 }
 
@@ -1433,11 +1433,16 @@ void WorldObject::UpdateGroundPositionZ(float x, float y, float &z) const
         z = new_z + (isType(TYPEMASK_UNIT) ? static_cast<Unit const*>(this)->GetHoverOffset() : 0.0f);
 }
 
-void WorldObject::UpdateAllowedPositionZ(float x, float y, float &z) const
+void WorldObject::UpdateAllowedPositionZ(float x, float y, float &z, float* groundZ) const
 {
     // TODO: Allow transports to be part of dynamic vmap tree
     if (GetTransport())
+    {
+        if (groundZ)
+            *groundZ = z;
+
         return;
+    }
 
     if (Unit const* unit = ToUnit())
     {
@@ -1463,12 +1468,18 @@ void WorldObject::UpdateAllowedPositionZ(float x, float y, float &z) const
                 else if (z < ground_z)
                     z = ground_z;
             }
+
+            if (groundZ)
+                *groundZ = ground_z;
         }
         else
         {
             float ground_z = GetMapHeight(x, y, z) + unit->GetHoverOffset();
             if (z < ground_z)
                 z = ground_z;
+
+            if (groundZ)
+               *groundZ = ground_z;
         }
     }
     else
@@ -1476,6 +1487,9 @@ void WorldObject::UpdateAllowedPositionZ(float x, float y, float &z) const
         float ground_z = GetMapHeight(x, y, z);
         if (ground_z > INVALID_HEIGHT)
             z = ground_z;
+
+        if (groundZ)
+            *groundZ = ground_z;
     }
 }
 
@@ -2592,13 +2606,13 @@ FactionTemplateEntry const* WorldObject::GetFactionTemplateEntry() const
     if (!entry)
     {
         if (Player const* player = ToPlayer())
-            TC_LOG_ERROR("entities", "Player %s has invalid faction (faction template id) #%u", player->GetName().c_str(), GetFaction());
+            TC_LOG_ERROR("entities.faction", "Player %s has invalid faction (faction template id) #%u", player->GetName().c_str(), GetFaction());
         else if (Creature const* creature = ToCreature())
-            TC_LOG_ERROR("entities.unit.badfaction", "Creature (template id: %u) has invalid faction (faction template id) #%u", creature->GetCreatureTemplate()->Entry, GetFaction());
+            TC_LOG_ERROR("entities.faction", "Creature (template id: %u) has invalid faction (faction template id) #%u", creature->GetCreatureTemplate()->Entry, GetFaction());
         else if (GameObject const* go = ToGameObject())
-            TC_LOG_ERROR("entities.gameobject.badfaction", "GameObject (template id: %u) has invalid faction (faction template id) #%u", go->GetGOInfo()->entry, GetFaction());
+            TC_LOG_ERROR("entities.faction", "GameObject (template id: %u) has invalid faction (faction template id) #%u", go->GetGOInfo()->entry, GetFaction());
         else
-            TC_LOG_ERROR("entities", "WorldObject (name: %s, type: %u) has invalid faction (faction template id) #%u", GetName().c_str(), uint32(GetTypeId()), GetFaction());
+            TC_LOG_ERROR("entities.faction", "WorldObject (name: %s, type: %u) has invalid faction (faction template id) #%u", GetName().c_str(), uint32(GetTypeId()), GetFaction());
     }
 
     return entry;
@@ -2775,13 +2789,13 @@ bool WorldObject::IsNeutralToAll() const
     return my_faction->IsNeutralToAll();
 }
 
-void WorldObject::CastSpell(SpellCastTargets const& targets, uint32 spellId, CastSpellExtraArgs const& args /*= { }*/)
+SpellCastResult WorldObject::CastSpell(SpellCastTargets const& targets, uint32 spellId, CastSpellExtraArgs const& args /*= { }*/)
 {
     SpellInfo const* info = sSpellMgr->GetSpellInfo(spellId);
     if (!info)
     {
         TC_LOG_ERROR("entities.unit", "CastSpell: unknown spell %u by caster %s", spellId, GetGUID().ToString().c_str());
-        return;
+        return SPELL_FAILED_SPELL_UNAVAILABLE;
     }
 
     Spell* spell = new Spell(this, info, args.TriggerFlags, args.OriginalCaster);
@@ -2789,10 +2803,10 @@ void WorldObject::CastSpell(SpellCastTargets const& targets, uint32 spellId, Cas
         spell->SetSpellValue(pair.first, pair.second);
 
     spell->m_CastItem = args.CastItem;
-    spell->prepare(targets, args.TriggeringAura);
+    return spell->prepare(targets, args.TriggeringAura);
 }
 
-void WorldObject::CastSpell(WorldObject* target, uint32 spellId, CastSpellExtraArgs const& args /*= { }*/)
+SpellCastResult WorldObject::CastSpell(WorldObject* target, uint32 spellId, CastSpellExtraArgs const& args /*= { }*/)
 {
     SpellCastTargets targets;
     if (target)
@@ -2804,17 +2818,17 @@ void WorldObject::CastSpell(WorldObject* target, uint32 spellId, CastSpellExtraA
         else
         {
             TC_LOG_ERROR("entities.unit", "CastSpell: Invalid target %s passed to spell cast by %s", target->GetGUID().ToString().c_str(), GetGUID().ToString().c_str());
-            return;
+            return SPELL_FAILED_BAD_TARGETS;
         }
     }
-    CastSpell(targets, spellId, args);
+    return CastSpell(targets, spellId, args);
 }
 
-void WorldObject::CastSpell(Position const& dest, uint32 spellId, CastSpellExtraArgs const& args /*= { }*/)
+SpellCastResult WorldObject::CastSpell(Position const& dest, uint32 spellId, CastSpellExtraArgs const& args /*= { }*/)
 {
     SpellCastTargets targets;
     targets.SetDst(dest);
-    CastSpell(targets, spellId, args);
+    return CastSpell(targets, spellId, args);
 }
 
 // function based on function Unit::CanAttack from 13850 client
@@ -3315,10 +3329,27 @@ void WorldObject::MovePositionToFirstCollision(Position &pos, float dist, float 
         }
     }
 
+    float groundZ = VMAP_INVALID_HEIGHT_VALUE;
     Trinity::NormalizeMapCoord(pos.m_positionX);
     Trinity::NormalizeMapCoord(pos.m_positionY);
-    UpdateAllowedPositionZ(destx, desty, pos.m_positionZ);
+    UpdateAllowedPositionZ(destx, desty, pos.m_positionZ, &groundZ);
     pos.SetOrientation(GetOrientation());
+
+    // position has no ground under it (or is too far away)
+    if (groundZ <= INVALID_HEIGHT)
+    {
+        if (Unit const* unit = ToUnit())
+        {
+            // unit can fly, ignore.
+            if (unit->CanFly())
+                return;
+
+            // fall back to gridHeight if any
+            float gridHeight = GetMap()->GetGridHeight(pos.m_positionX, pos.m_positionY);
+            if (gridHeight > INVALID_HEIGHT)
+                pos.m_positionZ = gridHeight + unit->GetHoverOffset();
+        }
+    }
 }
 
 void WorldObject::SetPhaseMask(uint32 newPhaseMask, bool update)

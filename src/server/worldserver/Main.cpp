@@ -30,6 +30,7 @@
 #include "Configuration/Config.h"
 #include "DatabaseEnv.h"
 #include "DatabaseLoader.h"
+#include "DeadlineTimer.h"
 #include "GitRevision.h"
 #include "InstanceSaveMgr.h"
 #include "IoContext.h"
@@ -55,7 +56,6 @@
 #endif
 #include <openssl/opensslv.h>
 #include <openssl/crypto.h>
-#include <boost/asio/deadline_timer.hpp>
 #include <boost/asio/signal_set.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/program_options.hpp>
@@ -100,7 +100,7 @@ class FreezeDetector
         static void Handler(std::weak_ptr<FreezeDetector> freezeDetectorRef, boost::system::error_code const& error);
 
     private:
-        boost::asio::deadline_timer _timer;
+        Trinity::Asio::DeadlineTimer _timer;
         uint32 _worldLoopCounter;
         uint32 _lastChangeMsTime;
         uint32 _maxCoreStuckTimeInMs;
@@ -218,6 +218,9 @@ extern int main(int argc, char** argv)
     // Start the databases
     if (!StartDB())
         return 1;
+
+    if (vm.count("update-databases-only"))
+        return 0;
 
     std::shared_ptr<void> dbHandle(nullptr, [](void*) { StopDB(); });
 
@@ -622,6 +625,7 @@ variables_map GetConsoleArguments(int argc, char** argv, fs::path& configFile, s
         ("version,v", "print version build info")
         ("config,c", value<fs::path>(&configFile)->default_value(fs::absolute(_TRINITY_CORE_CONFIG)),
                      "use <arg> as configuration file")
+        ("update-databases-only,u", "updates databases only")
         ;
 #ifdef _WIN32
     options_description win("Windows platform specific options");

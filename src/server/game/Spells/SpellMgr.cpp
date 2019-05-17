@@ -2806,6 +2806,7 @@ void SpellMgr::LoadSpellInfoCustomAttributes()
                                 spellInfo->Effects[j].ApplyAuraName == SPELL_AURA_PERIODIC_DUMMY)
                                 break;
                         }
+                        /* fallthrough */
                         default:
                         {
                             // No value and not interrupt cast or crowd control without SPELL_ATTR0_UNAFFECTED_BY_INVULNERABILITY flag
@@ -3361,7 +3362,9 @@ void SpellMgr::LoadSpellInfoCorrections()
         53457, // Summon Impale Trigger (AoE)
         45907, // Torch Target Picker
         52953, // Torch
-        58121  // Torch
+        58121, // Torch
+        43109  // Throw Torch
+        
     }, [](SpellInfo* spellInfo)
     {
         spellInfo->MaxAffectedTargets = 1;

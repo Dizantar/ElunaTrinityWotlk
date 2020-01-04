@@ -1,4 +1,5 @@
 [submodule "src/LuaEngine"]
 	path = src/server/game/LuaEngine
 	url = https://github.com/Dizantar/Eluna.git
-              
+	branch = Icehorn
+

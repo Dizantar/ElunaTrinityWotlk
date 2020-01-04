@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -166,7 +165,7 @@ void Map::LoadMMap(int gx, int gy)
     if (mmapLoadResult)
         TC_LOG_DEBUG("mmaps.tiles", "MMAP loaded name:%s, id:%d, x:%d, y:%d (mmap rep.: x:%d, y:%d)", GetMapName(), GetId(), gx, gy, gx, gy);
     else
-        TC_LOG_ERROR("mmaps.tiles", "Could not load MMAP name:%s, id:%d, x:%d, y:%d (mmap rep.: x:%d, y:%d)", GetMapName(), GetId(), gx, gy, gx, gy);
+        TC_LOG_WARN("mmaps.tiles", "Could not load MMAP name:%s, id:%d, x:%d, y:%d (mmap rep.: x:%d, y:%d)", GetMapName(), GetId(), gx, gy, gx, gy);
 }
 
 void Map::LoadVMap(int gx, int gy)
@@ -1414,6 +1413,9 @@ bool Map::CreatureCellRelocation(Creature* c, Cell new_cell)
 
         return true;
     }
+
+    if (c->GetCharmerOrOwnerGUID().IsPlayer())
+        EnsureGridLoaded(new_cell);
 
     // in diff. loaded grid normal creature
     if (IsGridLoaded(GridCoord(new_cell.GridX(), new_cell.GridY())))

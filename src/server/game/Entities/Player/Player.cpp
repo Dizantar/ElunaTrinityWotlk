@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -6825,6 +6824,7 @@ bool Player::RewardHonor(Unit* victim, uint32 groupsize, int32 honor, bool pvpto
             UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_HK_RACE, victim->GetRace());
             UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_HONORABLE_KILL_AT_AREA, GetAreaId());
             UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_HONORABLE_KILL, 1, 0, victim);
+            UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_SPECIAL_PVP_KILL, 1, 0, victim);
         }
         else
         {
@@ -12483,7 +12483,7 @@ void Player::DestroyItem(uint8 bag, uint8 slot, bool update)
     }
 }
 
-void Player::DestroyItemCount(uint32 itemEntry, uint32 count, bool update, bool unequip_check)
+uint32 Player::DestroyItemCount(uint32 itemEntry, uint32 count, bool update, bool unequip_check)
 {
     TC_LOG_DEBUG("entities.player.items", "Player::DestroyItemCount: Player '%s' (%s), Item: %u, Count: %u",
         GetName().c_str(), GetGUID().ToString().c_str(), itemEntry, count);
@@ -12503,7 +12503,7 @@ void Player::DestroyItemCount(uint32 itemEntry, uint32 count, bool update, bool 
                     DestroyItem(INVENTORY_SLOT_BAG_0, i, update);
 
                     if (remcount >= count)
-                        return;
+                        return remcount;
                 }
                 else
                 {
@@ -12512,7 +12512,7 @@ void Player::DestroyItemCount(uint32 itemEntry, uint32 count, bool update, bool 
                     if (IsInWorld() && update)
                         item->SendUpdateToPlayer(this);
                     item->SetState(ITEM_CHANGED, this);
-                    return;
+                    return remcount;
                 }
             }
         }
@@ -12531,7 +12531,7 @@ void Player::DestroyItemCount(uint32 itemEntry, uint32 count, bool update, bool 
                     DestroyItem(INVENTORY_SLOT_BAG_0, i, update);
 
                     if (remcount >= count)
-                        return;
+                        return remcount;
                 }
                 else
                 {
@@ -12540,7 +12540,7 @@ void Player::DestroyItemCount(uint32 itemEntry, uint32 count, bool update, bool 
                     if (IsInWorld() && update)
                         item->SendUpdateToPlayer(this);
                     item->SetState(ITEM_CHANGED, this);
-                    return;
+                    return remcount;
                 }
             }
         }
@@ -12564,7 +12564,7 @@ void Player::DestroyItemCount(uint32 itemEntry, uint32 count, bool update, bool 
                             DestroyItem(i, j, update);
 
                             if (remcount >= count)
-                                return;
+                                return remcount;
                         }
                         else
                         {
@@ -12573,7 +12573,7 @@ void Player::DestroyItemCount(uint32 itemEntry, uint32 count, bool update, bool 
                             if (IsInWorld() && update)
                                 item->SendUpdateToPlayer(this);
                             item->SetState(ITEM_CHANGED, this);
-                            return;
+                            return remcount;
                         }
                     }
                 }
@@ -12596,7 +12596,7 @@ void Player::DestroyItemCount(uint32 itemEntry, uint32 count, bool update, bool 
                         DestroyItem(INVENTORY_SLOT_BAG_0, i, update);
 
                         if (remcount >= count)
-                            return;
+                            return remcount;
                     }
                 }
                 else
@@ -12606,7 +12606,7 @@ void Player::DestroyItemCount(uint32 itemEntry, uint32 count, bool update, bool 
                     if (IsInWorld() && update)
                         item->SendUpdateToPlayer(this);
                     item->SetState(ITEM_CHANGED, this);
-                    return;
+                    return remcount;
                 }
             }
         }
@@ -12624,7 +12624,7 @@ void Player::DestroyItemCount(uint32 itemEntry, uint32 count, bool update, bool 
                     remcount += item->GetCount();
                     DestroyItem(INVENTORY_SLOT_BAG_0, i, update);
                     if (remcount >= count)
-                        return;
+                        return remcount;
                 }
                 else
                 {
@@ -12633,7 +12633,7 @@ void Player::DestroyItemCount(uint32 itemEntry, uint32 count, bool update, bool 
                     if (IsInWorld() && update)
                         item->SendUpdateToPlayer(this);
                     item->SetState(ITEM_CHANGED, this);
-                    return;
+                    return remcount;
                 }
             }
         }
@@ -12657,7 +12657,7 @@ void Player::DestroyItemCount(uint32 itemEntry, uint32 count, bool update, bool 
                             DestroyItem(i, j, update);
 
                             if (remcount >= count)
-                                return;
+                                return remcount;
                         }
                         else
                         {
@@ -12666,13 +12666,14 @@ void Player::DestroyItemCount(uint32 itemEntry, uint32 count, bool update, bool 
                             if (IsInWorld() && update)
                                 item->SendUpdateToPlayer(this);
                             item->SetState(ITEM_CHANGED, this);
-                            return;
+                            return remcount;
                         }
                     }
                 }
             }
         }
     }
+    return remcount;
 }
 
 void Player::DestroyZoneLimitedItem(bool update, uint32 new_zone)
@@ -15911,7 +15912,7 @@ bool Player::CanShareQuest(uint32 quest_id) const
         if (itr != m_QuestStatus.end())
         {
             // in pool and not currently available (wintergrasp weekly, dalaran weekly) - can't share
-            if (sQuestPoolMgr->IsQuestActive(quest_id))
+            if (!sQuestPoolMgr->IsQuestActive(quest_id))
             {
                 SendPushToPartyResponse(this, QUEST_PARTY_MSG_CANT_BE_SHARED_TODAY);
                 return false;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -454,6 +454,7 @@ struct GameObjectTemplate
             case GAMEOBJECT_TYPE_CHEST: return chest.losOK == 0;
             case GAMEOBJECT_TYPE_GOOBER: return goober.losOK == 0;
             case GAMEOBJECT_TYPE_FLAGSTAND: return flagstand.losOK == 0;
+            case GAMEOBJECT_TYPE_TRAP: return true;
             default: return false;
         }
     }

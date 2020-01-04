@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008-2019 TrinityCore <https://www.trinitycore.org/>
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -1124,7 +1123,7 @@ class GenericCreatureScript : public CreatureScript
 };
 #define RegisterCreatureAI(ai_name) new GenericCreatureScript<ai_name>(#ai_name)
 
-template <class AI, AI*(*AIFactory)(Creature*)>
+template <class AI, AI* (*AIFactory)(Creature*)>
 class FactoryCreatureScript : public CreatureScript
 {
     public:
@@ -1141,6 +1140,15 @@ class GenericGameObjectScript : public GameObjectScript
         GameObjectAI* GetAI(GameObject* go) const override { return new AI(go); }
 };
 #define RegisterGameObjectAI(ai_name) new GenericGameObjectScript<ai_name>(#ai_name)
+
+template <class AI, AI* (*AIFactory)(GameObject*)>
+class FactoryGameObjectScript : public GameObjectScript
+{
+    public:
+        FactoryGameObjectScript(char const* name) : GameObjectScript(name) { }
+        GameObjectAI* GetAI(GameObject* me) const override { return AIFactory(me); }
+};
+#define RegisterGameObjectAIWithFactory(ai_name, factory_fn) new FactoryGameObjectScript<ai_name, &factory_fn>(#ai_name)
 
 #define sScriptMgr ScriptMgr::instance()
 

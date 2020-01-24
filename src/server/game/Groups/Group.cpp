@@ -285,7 +285,9 @@ void Group::LoadMemberFromDB(ObjectGuid::LowType guidLow, uint8 memberFlags, uin
 void Group::ConvertToLFG()
 {
     m_groupType = GroupType(m_groupType | GROUPTYPE_LFG | GROUPTYPE_LFG_RESTRICTED);
-    m_lootMethod = NEED_BEFORE_GREED;
+    //m_lootMethod = NEED_BEFORE_GREED;
+    m_lootMethod = FREE_FOR_ALL; // Set LFG group to FFA
+    
     if (!isBGGroup() && !isBFGroup())
     {
         PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_UPD_GROUP_TYPE);

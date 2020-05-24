@@ -587,8 +587,10 @@ enum SMART_ACTION
     SMART_ACTION_PLAY_CINEMATIC                     = 135,    // entry, cinematic
     SMART_ACTION_SET_MOVEMENT_SPEED                 = 136,    // movementType, speedInteger, speedFraction
     SMART_ACTION_PLAY_SPELL_VISUAL_KIT              = 137,    // spellVisualKitId (RESERVED, PENDING CHERRYPICK)
+    SMART_ACTION_OVERRIDE_LIGHT                     = 138,    // zoneId, overrideLightID, transitionMilliseconds
+    SMART_ACTION_OVERRIDE_WEATHER                   = 139,    // zoneId, weatherId, intensity
 
-    SMART_ACTION_END                                = 138
+    SMART_ACTION_END                                = 140
 };
 
 struct SmartAction
@@ -1153,6 +1155,21 @@ struct SmartAction
             uint32 speedFraction;
         } movementSpeed;
 
+        struct
+        {
+            uint32 zoneId;
+            uint32 areaLightId;
+            uint32 overrideLightId;
+            uint32 transitionMilliseconds;
+        } overrideLight;
+
+        struct
+        {
+            uint32 zoneId;
+            uint32 weatherId;
+            uint32 intensity;
+        } overrideWeather;
+
         //! Note for any new future actions
         //! All parameters must have type uint32
 
@@ -1219,8 +1236,9 @@ enum SMARTAI_TARGETS
     SMART_TARGET_LOOT_RECIPIENTS                = 27,   // all players that have tagged this creature (for kill credit)
     SMART_TARGET_FARTHEST                       = 28,   // maxDist, playerOnly, isInLos
     SMART_TARGET_VEHICLE_PASSENGER              = 29,   // seatMask (0 - all seats)
+    SMART_TARGET_CLOSEST_UNSPAWNED_GAMEOBJECT   = 30,   // entry(0any), maxDist
 
-    SMART_TARGET_END                            = 30
+    SMART_TARGET_END                            = 31
 };
 
 struct SmartTarget
